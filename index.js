@@ -22,69 +22,69 @@ client.connect((err) => {
   const productCollection = client.db("freshValley").collection("products");
   const orderCollection = client.db("freshValley").collection("orders");
 
-  app.get("/products", (req, res) => {
-    productCollection.find().toArray((err, items) => {
-      res.send(items);
-    });
-  });
-
-  app.get("/product/:id", (req, res) => {
-    productCollection
-      .find({ _id: ObjectId(req.params.id) })
-      .toArray((err, items) => {
-        console.log(err, items);
-        res.send(items[0]);
-      });
-  });
-
-  app.get("/orders", (req, res) => {
-    orderCollection.find({ email: req.query.email }).toArray((err, items) => {
-      res.send(items);
-      // console.log('From Database ',items)
-    });
-  });
-
   app.post("/addProduct", (req, res) => {
     const newProduct = req.body;
-    console.log("adding neew product: ", newProduct);
+    productCollection.insertOne(newProduct).then((result) => {
+      res.send(result.insertedCount > 0);
+    });
+  });
+
+  app.get("/products", (req, res) => {
+    productCollection.find({}).toArray((err, products) => {
+      res.send(products);
+    });
+  });
+
+  app.get("/singleProduct/:id", (req, res) => {
     productCollection
-      .insertOne(newProduct)
-      .then((result) => {
-        console.log("inserted count", result.insertedCount);
-        res.send(result.insertedCount > 0);
-      })
-      .catch((error) => {
-        console.log(error);
+      .find({ _id: ObjectId(req.params.id) })
+      .toArray((err, docs) => {
+        res.send(docs[0]);
       });
   });
 
-  app.post("/addOrder", (req, res) => {
+  app.patch("/updateProduct/:id", (req, res) => {
+    productCollection
+      .updateOne(
+        { _id: ObjectId(req.params.id) },
+        {
+          $set: {
+            name: req.body.name,
+            price: req.body.price,
+            weight: req.body.weight,
+            imgUrl: req.body.imgUrl,
+          },
+        }
+      )
+      .then((result) => {
+        res.send(result.modifiedCount > 0);
+      });
+  });
+
+  //Delete data
+  app.delete("/deleteProduct/:id", (req, res) => {
+    productCollection
+      .deleteOne({ _id: ObjectId(req.params.id) })
+      .then((result) => {
+        res.send(result.deletedCount > 0);
+      });
+  });
+
+  app.post("/placeOrder", (req, res) => {
+    console.log(req.body);
     const newOrder = req.body;
-    console.log("adding new order", newOrder);
-    orderCollection
-      .insertOne(newOrder)
-      .then((result) => {
-        console.log("inserted new order", result.insertedCount);
-        res.send(result.insertedCount > 0);
-      })
-      .catch((error) => {
-        console.log(error);
-      });
+    orderCollection.insertOne(newOrder).then((result) => {
+      res.send(result.insertedCount > 0);
+    });
   });
 
-  //Delete From Manage Product
-  app.delete("deleteProduct/:id", (req, res) => {
-    const id = ObjectId(req.params.id);
-    console.log("delete this", id);
-    productCollection
-      .findOneAndDelete({ _id: id })
-      .then((items) => res.send(!!items.value));
+  app.get("/orders/:email", (req, res) => {
+    orderCollection.find({ email: req.params.email }).toArray((err, docs) => {
+      res.send(docs);
+    });
   });
 });
 
-app.get("/", (req, res) => {
-  res.send("Hello World!");
-});
 
 app.get('/',(req,res)=>{
   res.send("yay! working");
